@@ -23,7 +23,8 @@ class SplashPage extends StatelessWidget {
     var url = "http://streaming.drcoderz.com/files.php";
 
     var response = await http.get(url);
-    List responseJSON = jsonDecode(response.body.toString());
+    String cleanString = response.body.substring(3, response.body.length);
+    List responseJSON = jsonDecode(cleanString);
     genres = createGenreList(responseJSON);
 
     return genres;
@@ -56,6 +57,7 @@ class SplashPage extends StatelessWidget {
       );
     }
 
+    Utils.genres = jsonGenres;
     return jsonGenres;
   }
 
@@ -75,7 +77,7 @@ class SplashPage extends StatelessWidget {
     Timer.run(() {
       new Timer(new Duration(days: 0, hours: 0, minutes: 0, seconds: 2, microseconds: 0, milliseconds: 0), () {
         
-        getInfoFromFile().then((items) => 
+        getInfo().then((items) => 
           Navigator.push(context, 
           MaterialPageRoute(
             builder: (context) => HomePage()))
@@ -205,7 +207,12 @@ class HomePageState extends State<HomePage> {
 
       list.add(
         InkWell(
-        onTap: () {},
+        onTap: () {
+          setState(() {
+            selectedGenre = genre;
+            selectedSong = selectedGenre.songs[0];
+          });
+        },
         child: 
           Padding(
             padding: EdgeInsets.only(top: 5, bottom: 5),
