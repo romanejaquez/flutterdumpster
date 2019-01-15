@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:audioplayer/audioplayer.dart';
 
 void main() => runApp(MaterialApp(home: SplashPage(), debugShowCheckedModeBanner: false));
 
@@ -104,12 +105,47 @@ class SplashPage extends StatelessWidget {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() {
+    return HomePageState();
+  }
+}
 
+enum PlayerState {
+  playing,
+  paused,
+  stopped
+}
+
+class HomePageState extends State<HomePage> {
   Genre selectedGenre;
+  Song selectedSong;
+  AudioPlayer player;
+  PlayerState playerState;
+  Color selectedColor = Colors.transparent;
 
-  HomePage() {
+  HomePageState() {
+    player = new AudioPlayer();
+    playerState = PlayerState.paused;
     selectedGenre = Utils.genres[0];
+    selectedSong = selectedGenre.songs[0];
+  }
+
+  Future<void> togglePlay() async {
+
+    if (playerState == PlayerState.playing) {
+      await player.pause();
+      setState(() {
+         playerState = PlayerState.paused;     
+      });
+    }
+    else {
+      await player.play(selectedSong.path.replaceAll(' ', '%20'));
+      setState(() {
+        playerState = PlayerState.playing;
+      });
+    }
   }
 
   List<Widget> getAllSongRows() {
@@ -121,8 +157,14 @@ class HomePage extends StatelessWidget {
 
       allSongWidgets.add(
         InkWell(
-            onTap: () {},
+            onTap: () {
+              selectedGenre.songs.forEach((s) => s.isSelected = false);
+              selectedSong = song;
+              selectedSong.isSelected = true;
+              togglePlay();
+            },
             child: Container(
+            color: (song == selectedSong && selectedSong.isSelected ? Utils.accentBlue.withOpacity(0.1) : Colors.transparent),
             padding: EdgeInsets.only(left: 25, top: 20, right: 25, bottom: 20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -295,46 +337,67 @@ class HomePage extends StatelessWidget {
                 Positioned(
                   top: 60,
                   left: 0, right: 0,
-                  bottom: 100,
+                  bottom: 130,
                   child: ListView(
                     children: getAllSongRows(),
                   ),
                 ),
                 Positioned(
+                  left: 0, right: 0,
+                  bottom: 93,
+                  child: Container(
+                    padding: EdgeInsets.all(10),
+                    color: Colors.white.withOpacity(0.1),
+                    child: Text(selectedSong.name,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.white)),
+                  )),
+                Positioned(
                   bottom: 0,
                   left: 0, right: 0,
                   child: Padding(
                     padding: EdgeInsets.all(30),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
-                        Container(
-                          width: 44, height: 44,
-                          child: Icon(
-                            Icons.play_circle_outline,
-                            color: Colors.white,
-                            size: 44),
-                        ),
-                        Container(
-                          child: Icon(Icons.forward_10, color: Colors.white, size: 44),
-                        ),
-                        Slider(
-                          onChanged: (double value) {
-                            return value;
-                          },
-                          min: 0,
-                          max: 100,
-                          value: 50.0,
-                          activeColor: Utils.accentBlue,
-                          inactiveColor: Colors.white.withOpacity(0.1),
-                        ),
-                        Container(
-                          child: Icon(Icons.repeat, color: Colors.white, size: 44),
-                        ),
-                        /*Container(
-                          child: Icon(Icons.shuffle, color: Colors.white, size: 44),
-                        ),*/
+                        Row(
+                          children: <Widget>[
+                            GestureDetector(
+                              onTap: () { 
+                                togglePlay(); 
+                              },
+                              child: Container(
+                                width: 44, height: 44,
+                                child: Icon(
+                                  (playerState == PlayerState.paused 
+                                    ? Icons.play_circle_outline : Icons.pause_circle_outline),
+                                  color: Colors.white,
+                                  size: 44),
+                              ),
+                            ),
+                            Container(
+                              child: Icon(Icons.forward_10, color: Colors.white, size: 44),
+                            ),
+                            Slider(
+                              onChanged: (double value) {
+                                return value;
+                              },
+                              min: 0,
+                              max: 100,
+                              value: 50.0,
+                              activeColor: Utils.accentBlue,
+                              inactiveColor: Colors.white.withOpacity(0.1),
+                            ),
+                            Container(
+                              child: Icon(Icons.repeat, color: Colors.white, size: 44),
+                            ),
+                            /*Container(
+                              child: Icon(Icons.shuffle, color: Colors.white, size: 44),
+                            ),*/
+                          ],
+                        )
                       ],
                     ),
                   ),
@@ -360,6 +423,7 @@ class Song {
   String id;
   int index;
   String path;
+  bool isSelected = false;
 
   Song({this.name, this.duration, this.id, this.index, this.path});
 }
